@@ -18,7 +18,7 @@ client = MultiServerMCPClient(
 
         "aviationstack": {
             "transport": "stdio",
-            "command": r"E:\Multi_agent_system_with_MCP\aviationstack-mcp\.venv\Scripts\python.exe",
+            "command": r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\aviationstack-mcp\.venv\Scripts\python.exe",
             "args": [
                 "-m",
                 "aviationstack_mcp",
@@ -31,9 +31,9 @@ client = MultiServerMCPClient(
         }   ,
         "weather": {
             "transport": "stdio",
-            "command": r"E:\multi_agent_system_demo\langgraph_env3\Scripts\python.exe",
+            "command": r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\langgraph_env\Scripts\python.exe",
             "args": [
-                r"E:\Multi_agent_system_with_MCP\weather_mcp_server.py"
+                r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\weather_mcp_server.py"
             ],
             "env": {
                 "OPENWEATHER_API_KEY": OPENWEATHER_API_KEY

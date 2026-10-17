@@ -26,7 +26,7 @@ with st.sidebar:
 
 query = st.text_area(
     "Travel request",
-    placeholder="Plan a 7-day Japan trip under Rs. 2 lakh. I prefer budget hotels and no overnight flights.",
+    placeholder="Plan a 7-day Japan trip under 2 lakh BDT. I prefer budget hotels and no overnight flights.",
     height=110,
 )
 

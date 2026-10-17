@@ -293,6 +293,63 @@ and booking advice.
 
 
 
+def _format_hotel_results(raw_result: Any) -> str:
+    text = ""
+    if isinstance(raw_result, list) and len(raw_result) > 0:
+        item = raw_result[0]
+        if isinstance(item, dict) and "text" in item:
+            text = item["text"]
+        else:
+            text = str(raw_result)
+    elif isinstance(raw_result, str):
+        text = raw_result
+    else:
+        text = str(raw_result)
+
+    try:
+        data = json.loads(text)
+        results = data.get("results", [])
+        if results:
+            lines = []
+            for r in results[:5]:
+                title = r.get("title", "Hotel")
+                content = r.get("content", "")[:250].strip()
+                lines.append(f"- **{title}**: {content}")
+            return "\n\n".join(lines)
+    except Exception:
+        pass
+
+    return text[:2000]
+
+
+def _format_weather_results(weather_data: Any, forecast_data: Any) -> str:
+    def _extract_text(data):
+        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict) and "text" in data[0]:
+            return data[0]["text"]
+        return str(data)
+
+    w_text = _extract_text(weather_data)
+    f_text = _extract_text(forecast_data)
+
+    try:
+        w_json = json.loads(w_text)
+        w_summary = f"{w_json.get('city')}: {w_json.get('temperature_c')}°C, {w_json.get('condition')}, humidity {w_json.get('humidity')}%"
+    except Exception:
+        w_summary = w_text[:500]
+
+    try:
+        f_json = json.loads(f_text)
+        f_lines = [
+            f"- {item.get('datetime')}: {item.get('temperature')}°C, {item.get('weather')}"
+            for item in f_json.get("forecast", [])[:5]
+        ]
+        f_summary = "\n".join(f_lines)
+    except Exception:
+        f_summary = f_text[:800]
+
+    return f"Current Weather:\n{w_summary}\n\nForecast:\n{f_summary}"
+
+
 def hotel_agent(state: TravelState):
     query = f"Best hotels and areas to stay for: {state['user_query']}"
 
@@ -301,20 +358,21 @@ def hotel_agent(state: TravelState):
     print("=======================================\n")
 
     result = asyncio.run(tavily_search(query))
+    formatted_result = _format_hotel_results(result)
 
     print("\n========== HOTEL SEARCH RESULT ==========")
-    print(result)
+    print(formatted_result)
     print("=========================================\n")
 
     return {
-        "hotel_results": str(result),
+        "hotel_results": formatted_result,
         "messages": [AIMessage(content="Hotel agent completed.")],
     }
 
 
 def weather_agent(state: TravelState):
     constraints = state["trip_constraints"]
-    city = constraints["destination"]
+    city = constraints.get("destination", "")
 
     print("\n========== WEATHER AGENT INPUT ==========")
     print("City:", city)
@@ -323,21 +381,7 @@ def weather_agent(state: TravelState):
     weather_data = asyncio.run(current_weather(city))
     forecast_data = asyncio.run(forecast(city))
 
-    print("\n========== CURRENT WEATHER ==========")
-    print(weather_data)
-    print("=====================================\n")
-
-    print("\n========== WEATHER FORECAST ==========")
-    print(forecast_data)
-    print("======================================\n")
-
-    result = f"""
-Current weather:
-{weather_data}
-
-Forecast:
-{forecast_data}
-"""
+    result = _format_weather_results(weather_data, forecast_data)
 
     print("\n========== WEATHER AGENT OUTPUT ==========")
     print(result)
@@ -373,13 +417,13 @@ Constraints:
 {state.get('trip_constraints', {})}
 
 Flight results:
-{state.get('flight_results', '')}
+{str(state.get('flight_results', ''))[:2000]}
 
 Hotel results:
-{state.get('hotel_results', '')}
+{str(state.get('hotel_results', ''))[:2000]}
 
 Weather results:
-{state.get('weather_results', '')}
+{str(state.get('weather_results', ''))[:1500]}
 
 Return a concise budget assessment with:
 1. estimated cost categories
@@ -434,16 +478,16 @@ Trip constraints:
 {state.get('trip_constraints', {})}
 
 Flight results:
-{state.get('flight_results', '')}
+{str(state.get('flight_results', ''))[:2000]}
 
 Hotel results:
-{state.get('hotel_results', '')}
+{str(state.get('hotel_results', ''))[:2000]}
 
 Weather results:
-{state.get('weather_results', '')}
+{str(state.get('weather_results', ''))[:1500]}
 
 Budget results:
-{state.get('budget_results', '')}
+{str(state.get('budget_results', ''))[:1500]}
 
 Make the output structured, practical, and ready for human review.
 """
@@ -511,10 +555,10 @@ The human approved this draft itinerary.
 Produce the final polished travel plan.
 
 Draft itinerary:
-{state['itinerary']}
+{str(state.get('itinerary', ''))[:3000]}
 
 Budget notes:
-{state['budget_results']}
+{str(state.get('budget_results', ''))[:1500]}
 """
     else:
         prompt = f"""
@@ -524,13 +568,13 @@ Original user request:
 {state['user_query']}
 
 Draft itinerary:
-{state['itinerary']}
+{str(state.get('itinerary', ''))[:3000]}
 
 Human feedback:
-{state['human_feedback']}
+{state.get('human_feedback', '')}
 
 Budget notes:
-{state['budget_results']}
+{str(state.get('budget_results', ''))[:1500]}
 """
 
     result = _llm_text(
