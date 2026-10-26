@@ -7,6 +7,11 @@ class TravelState(TypedDict, total=False):
     user_id: str
     user_query: str
 
+    request_signature: str
+    request_timestamp: float
+    is_authenticated: bool
+    enable_guardrail: bool
+
     trip_constraints: dict[str, Any]
     selected_agents: list[str]
     supervisor_reasoning: str

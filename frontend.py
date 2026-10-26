@@ -1,9 +1,12 @@
+import time
 import uuid
 
 import streamlit as st
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 
+from config import HMAC_SECRET_KEY, ENABLE_TIER1_GUARDRAIL
+from gaurdrails import generate_signature
 from graph import app
 
 
@@ -12,8 +15,16 @@ st.set_page_config(page_title="Real-World Multi-Agent Travel Planner", layout="w
 st.title("Real-World Multi-Agent Travel Planner")
 
 with st.sidebar:
-    st.subheader("Session")
+    st.subheader("Session & Security")
     user_id = st.text_input("User ID", value="demo_user")
+    
+    st.markdown("---")
+    st.caption("🛡️ **Tier 1 Security Guardrail (Research Mode)**")
+    guardrail_active = st.checkbox("Enable Tier 1 Defense", value=ENABLE_TIER1_GUARDRAIL, help="Uncheck to test Vulnerable Baseline Mode (Defenseless)")
+    simulate_tamper = st.checkbox("Simulate Tampered HMAC Signature", value=False, help="Test Tier 1 rejection by corrupting the HMAC signature")
+    simulate_expired = st.checkbox("Simulate Expired Timestamp (Replay)", value=False, help="Test Tier 1 replay rejection by sending an old timestamp")
+
+    st.markdown("---")
     if "thread_id" not in st.session_state:
         st.session_state.thread_id = f"{user_id}_{uuid.uuid4().hex[:8]}"
     if st.button("New Thread"):
@@ -37,12 +48,25 @@ if st.button("Create Draft Plan", type="primary"):
     if not query.strip():
         st.warning("Enter a travel request first.")
     else:
-        with st.spinner("Agents are planning..."):
+        # Tier 1: Generate cryptographic timestamp and signature
+        current_time = time.time()
+        if simulate_expired:
+            current_time -= 600  # 10 minutes in the past (> 300s allowed)
+
+        signature = generate_signature(query, current_time, HMAC_SECRET_KEY)
+        if simulate_tamper:
+            signature = "tampered_signature_" + signature[18:]
+
+        with st.spinner("Verifying Tier 1 Guardrail & running planning agents..."):
             result = app.invoke(
                 {
                     "messages": [HumanMessage(content=query)],
                     "user_id": user_id,
                     "user_query": query,
+                    "request_signature": signature,
+                    "request_timestamp": current_time,
+                    "enable_guardrail": guardrail_active,
+                    "is_authenticated": False,
                     "flight_results": "",
                     "hotel_results": "",
                     "weather_results": "",
@@ -61,28 +85,33 @@ if st.button("Create Draft Plan", type="primary"):
 result = st.session_state.get("latest_result")
 
 if result:
-    st.subheader("Supervisor Plan")
-    st.write(result.get("supervisor_reasoning", ""))
-    st.write("Selected agents:", result.get("selected_agents", []))
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Flight")
-        st.markdown(result.get("flight_results", ""))
-        st.subheader("Weather")
-        st.markdown(result.get("weather_results", ""))
-    with col2:
-        st.subheader("Hotels")
-        st.markdown(result.get("hotel_results", ""))
-        st.subheader("Budget")
-        st.markdown(result.get("budget_results", ""))
-
-    st.subheader("Draft Itinerary")
-    if "__interrupt__" in result:
-        draft = result["__interrupt__"][0].value.get("draft_itinerary", "")
+    if not result.get("is_authenticated", True):
+        st.error(result.get("final_response") or "Request blocked by Tier 1 Security Guardrail.")
+    elif not result.get("selected_agents"):
+        st.info(result.get("final_response") or result.get("supervisor_reasoning", "Request rejected by input guardrail."))
     else:
-        draft = result.get("itinerary", "")
-    st.markdown(draft)
+        st.subheader("Supervisor Plan")
+        st.write(result.get("supervisor_reasoning", ""))
+        st.write("Selected agents:", result.get("selected_agents", []))
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Flight")
+            st.markdown(result.get("flight_results", ""))
+            st.subheader("Weather")
+            st.markdown(result.get("weather_results", ""))
+        with col2:
+            st.subheader("Hotels")
+            st.markdown(result.get("hotel_results", ""))
+            st.subheader("Budget")
+            st.markdown(result.get("budget_results", ""))
+
+        st.subheader("Draft Itinerary")
+        if "__interrupt__" in result:
+            draft = result["__interrupt__"][0].value.get("draft_itinerary", "")
+        else:
+            draft = result.get("itinerary", "")
+        st.markdown(draft)
 
 
 if st.session_state.get("waiting_for_approval"):
@@ -109,7 +138,7 @@ if st.session_state.get("waiting_for_approval"):
 
 
 final_result = st.session_state.get("latest_result")
-if final_result and final_result.get("final_response"):
+if final_result and final_result.get("selected_agents") and final_result.get("final_response"):
     st.divider()
     st.subheader("Final Travel Plan")
     st.markdown(final_result["final_response"])

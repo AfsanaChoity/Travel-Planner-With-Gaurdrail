@@ -12,6 +12,8 @@ from agents import (
     supervisor_agent,
     weather_agent,
 )
+
+from gaurdrails import hmac_guardrail_node
 from config import DATABASE_URL
 from state import TravelState
 
@@ -29,17 +31,32 @@ ROUTE_MAP = {
     "weather_agent": "weather_agent",
     "budget_agent": "budget_agent",
     "itinerary_agent": "itinerary_agent",
+    END: END,
 }
 
 
+ROUTE_MAP_HMAC = {
+    "supervisor": "supervisor",
+    END: END,
+}
+
+
+def route_from_hmac(state: TravelState) -> str:
+    if state.get("is_authenticated", False):
+        return "supervisor"
+    return END
+
+
 def _selected_agents(state: TravelState) -> list[str]:
-    selected = state.get("selected_agents")
+    selected = state.get("selected_agents", [])
     return [agent for agent in AGENT_ORDER if agent in selected]  
 
 
 def route_from_supervisor(state: TravelState) -> str:
     selected = _selected_agents(state)
-    return selected[0] if selected else "itinerary_agent"
+    if not selected:
+        return END
+    return selected[0]
 
 
 
@@ -62,6 +79,7 @@ def route_after_agent(current_agent: str):
 def build_graph():
     graph = StateGraph(TravelState)
 
+    graph.add_node("hmac_guardrail", hmac_guardrail_node)
     graph.add_node("supervisor", supervisor_agent)
     graph.add_node("flight_agent", flight_agent)
     graph.add_node("hotel_agent", hotel_agent)
@@ -71,7 +89,8 @@ def build_graph():
     graph.add_node("human_approval", human_approval_agent)
     graph.add_node("final_response", final_response_agent)
 
-    graph.add_edge(START, "supervisor")
+    graph.add_edge(START, "hmac_guardrail")
+    graph.add_conditional_edges("hmac_guardrail", route_from_hmac, ROUTE_MAP_HMAC)
     graph.add_conditional_edges("supervisor", route_from_supervisor, ROUTE_MAP)
     graph.add_conditional_edges("flight_agent", route_after_agent("flight_agent"), ROUTE_MAP)
     graph.add_conditional_edges("hotel_agent", route_after_agent("hotel_agent"), ROUTE_MAP)

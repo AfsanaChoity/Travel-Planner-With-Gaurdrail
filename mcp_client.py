@@ -11,11 +11,13 @@ from config import (
 # Create MCP Client
 client = MultiServerMCPClient(
     {
+        # Remote MCP
         "tavily": {
             "transport": "streamable_http",
             "url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={TAVILY_API_KEY}"
         },
 
+        # Local MCP
         "aviationstack": {
             "transport": "stdio",
             "command": r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\aviationstack-mcp\.venv\Scripts\python.exe",
@@ -29,9 +31,11 @@ client = MultiServerMCPClient(
                 "AVIATION_STACK_API_KEY": AVIATION_STACK_API_KEY
             }
         }   ,
+
+        # Custom MCP
         "weather": {
             "transport": "stdio",
-            "command": r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\langgraph_env\Scripts\python.exe",
+            "command": r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\.venv\Scripts\python.exe",
             "args": [
                 r"C:\Users\User\Desktop\Multi_Agent_System\Travel_Planner_Agent\weather_mcp_server.py"
             ],
