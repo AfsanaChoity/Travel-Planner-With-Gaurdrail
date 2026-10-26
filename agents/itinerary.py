@@ -4,22 +4,47 @@ from .helpers import _llm_text, safe_print
 
 def itinerary_agent(state: TravelState):
 
-    print("\n========== ITINERARY AGENT INPUT ==========")
-    print("Trip Constraints:")
-    print(state.get("trip_constraints"))
+    safe_print("\n========== ITINERARY AGENT INPUT ==========")
+    safe_print("Trip Constraints:")
+    safe_print(str(state.get("trip_constraints")))
 
-    print("\nFlight Results:")
-    print(state.get("flight_results"))
+    safe_print("\nFlight Results:")
+    safe_print(str(state.get("flight_results")))
 
-    print("\nHotel Results:")
-    print(state.get("hotel_results"))
+    safe_print("\nHotel Results:")
+    safe_print(str(state.get("hotel_results")))
 
-    print("\nWeather Results:")
-    print(state.get("weather_results"))
+    safe_print("\nWeather Results:")
+    safe_print(str(state.get("weather_results")))
 
-    print("\nBudget Results:")
-    print(state.get("budget_results"))
-    print("===========================================\n")
+    safe_print("\nBudget Results:")
+    safe_print(str(state.get("budget_results")))
+    safe_print("===========================================\n")
+
+    # Check if any tool return was blocked by Tier-1 Tool HMAC Guardrail
+    compromised_tools = [
+        k for k in ["flight_results", "hotel_results", "weather_results"]
+        if "TIER-1 SECURITY ALERT" in str(state.get(k, ""))
+    ]
+
+    if compromised_tools:
+        alert_msg = (
+            "[SECURITY ALERT] **Security Halt (Tier-1 Tool Guardrail)**\n\n"
+            f"An external adversary (**Evo-Attacker**) attempted to intercept and tamper with tool return data: `{', '.join(compromised_tools)}`.\n\n"
+            "**Defense Status:** The **Tier-1 Tool Return HMAC Guardrail** successfully detected the cryptographic signature mismatch and dropped the poisoned payloads before they could corrupt the system.\n\n"
+            "**Action Taken:** Itinerary generation was safely halted to prevent cascading failure and protect the user from fraudulent recommendations."
+        )
+        print("\n========== ITINERARY HALTED (SECURITY ATTACK DETECTED) ==========")
+        safe_print(alert_msg)
+        print("=================================================================\n")
+
+        return {
+            "itinerary": alert_msg,
+            "approval_request": alert_msg,
+            "final_response": alert_msg,
+            "messages": [AIMessage(content=alert_msg)],
+            "llm_calls": state.get("llm_calls", 0),
+        }
 
     prompt = f"""
 Create a clear draft travel itinerary.

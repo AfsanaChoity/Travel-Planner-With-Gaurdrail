@@ -22,6 +22,13 @@ def hmac_guardrail_node(state: TravelState) -> dict:
     print("Signature:", signature)
     print("============================================\n")
 
+    # Session/Thread continuity: If request was already verified and authenticated in this thread, pass through
+    if state.get("is_authenticated") is True:
+        print("[TIER 1] Session already authenticated. Passing to next agent...\n")
+        return {
+            "is_authenticated": True,
+        }
+
     # Research Evaluation Mode: If disabled, bypass check to measure baseline vulnerability
     if not guardrail_enabled:
         print("[RESEARCH BASELINE] Tier 1 Guardrail is DISABLED. Bypassing verification...\n")

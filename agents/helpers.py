@@ -27,17 +27,17 @@ def _llm_text(system: str, prompt: str) -> str:
     return response.content
 
 def _json_from_llm(text: str) -> dict:
-    print("\n========== RAW LLM RESPONSE ==========")
-    print(text)
-    print("======================================\n")
+    safe_print("\n========== RAW LLM RESPONSE ==========")
+    safe_print(text)
+    safe_print("======================================\n")
 
     start = text.index("{")
     end = text.rindex("}") + 1
 
     json_text = text[start:end]
 
-    print("\n========== EXTRACTED JSON ==========")
-    print(json_text)
-    print("====================================\n")
+    safe_print("\n========== EXTRACTED JSON ==========")
+    safe_print(json_text)
+    safe_print("====================================\n")
 
     return json.loads(json_text)

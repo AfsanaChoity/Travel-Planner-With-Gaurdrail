@@ -10,6 +10,8 @@ OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 HMAC_SECRET_KEY = os.getenv("HMAC_SECRET_KEY")
 ENABLE_TIER1_GUARDRAIL = os.getenv("ENABLE_TIER1_GUARDRAIL", "true").lower() == "true"
+ENABLE_TOOL_HMAC_GUARD = os.getenv("ENABLE_TOOL_HMAC_GUARD", "true").lower() == "true"
+SIMULATE_EVO_ATTACK = os.getenv("SIMULATE_EVO_ATTACK", "false").lower() == "true"
 
 def get_llm():
-    return ChatGroq(model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"))
+    return ChatGroq(model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"))

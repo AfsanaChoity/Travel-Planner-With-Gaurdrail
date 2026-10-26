@@ -9,6 +9,12 @@ def final_response_agent(state: TravelState):
     print("Feedback:", state.get("human_feedback"))
     print("=======================================\n")
 
+    if "Security Halt" in state.get("final_response", ""):
+        return {
+            "final_response": state["final_response"],
+            "messages": [AIMessage(content=state["final_response"])],
+        }
+
     if state["approved"]:
         prompt = f"""
 The human approved this draft itinerary.

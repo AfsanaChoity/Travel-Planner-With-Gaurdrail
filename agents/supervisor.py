@@ -1,7 +1,7 @@
 import json
 from langchain_core.messages import AIMessage
 from state import TravelState
-from .helpers import _llm_text, _json_from_llm
+from .helpers import _llm_text, _json_from_llm, safe_print
 
 # with guardrail
 def supervisor_agent(state: TravelState):
@@ -28,13 +28,13 @@ def supervisor_agent(state: TravelState):
     )
 
     print("\n========== GUARDRAIL RAW RESPONSE ==========")
-    print(guardrail_raw)
+    safe_print(guardrail_raw)
     print("============================================\n")
 
     guardrail_result = _json_from_llm(guardrail_raw)
 
     print("\n========== GUARDRAIL PARSED RESPONSE ==========")
-    print(json.dumps(guardrail_result, indent=2))
+    safe_print(json.dumps(guardrail_result, indent=2))
     print("================================================\n")
 
     if not guardrail_result.get("allowed", False):
@@ -44,10 +44,10 @@ def supervisor_agent(state: TravelState):
         )
 
         friendly_message = (
-            "🌍 **Travel Planning Assistant**\n\n"
+            "**Travel Planning Assistant**\n\n"
             "I'm specialized exclusively in helping you plan trips, find flights, recommend hotels, check weather, and build itineraries.\n\n"
-            f"ℹ️ *{reason}*\n\n"
-            "✈️ *Please ask a travel-related request to get started!*"
+            f"[INFO] *{reason}*\n\n"
+            "*Please ask a travel-related request to get started!*"
         )
 
         return {
@@ -101,13 +101,13 @@ User request:
     )
 
     print("\n========== RAW LLM RESPONSE ==========")
-    print(raw)
+    safe_print(raw)
     print("======================================\n")
 
     parsed = _json_from_llm(raw)
    
     print("\n========== PARSED JSON ==========")
-    print(json.dumps(parsed, indent=2))
+    safe_print(json.dumps(parsed, indent=2))
     print("=================================\n")
     
     selected = parsed["selected_agents"]    

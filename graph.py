@@ -1,4 +1,5 @@
 import psycopg
+from psycopg.rows import dict_row
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import END, START, StateGraph
 
@@ -79,7 +80,9 @@ def route_after_agent(current_agent: str):
 def build_graph():
     graph = StateGraph(TravelState)
 
+    # Tier-1 User Input Guardrail Node
     graph.add_node("hmac_guardrail", hmac_guardrail_node)
+
     graph.add_node("supervisor", supervisor_agent)
     graph.add_node("flight_agent", flight_agent)
     graph.add_node("hotel_agent", hotel_agent)
@@ -89,8 +92,10 @@ def build_graph():
     graph.add_node("human_approval", human_approval_agent)
     graph.add_node("final_response", final_response_agent)
 
+    # Route START through hmac_guardrail
     graph.add_edge(START, "hmac_guardrail")
     graph.add_conditional_edges("hmac_guardrail", route_from_hmac, ROUTE_MAP_HMAC)
+
     graph.add_conditional_edges("supervisor", route_from_supervisor, ROUTE_MAP)
     graph.add_conditional_edges("flight_agent", route_after_agent("flight_agent"), ROUTE_MAP)
     graph.add_conditional_edges("hotel_agent", route_after_agent("hotel_agent"), ROUTE_MAP)
@@ -101,7 +106,12 @@ def build_graph():
     graph.add_edge("final_response", END)
 
     if DATABASE_URL:
-        conn = psycopg.connect(DATABASE_URL)
+        conn = psycopg.connect(
+            DATABASE_URL,
+            autocommit=True,
+            prepare_threshold=0,
+            row_factory=dict_row,
+        )
         checkpointer = PostgresSaver(conn)
         checkpointer.setup()
         return graph.compile(checkpointer=checkpointer)

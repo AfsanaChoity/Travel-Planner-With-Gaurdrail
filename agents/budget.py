@@ -4,16 +4,16 @@ from .helpers import _llm_text, safe_print
 
 def budget_agent(state: TravelState):
 
-    print("\n========== BUDGET AGENT INPUT ==========")
-    print("Trip Constraints:")
-    print(state.get("trip_constraints"))
-    print("\nFlight Results:")
-    print(state.get("flight_results"))
-    print("\nHotel Results:")
-    print(state.get("hotel_results"))
-    print("\nWeather Results:")
-    print(state.get("weather_results"))
-    print("=========================================\n")
+    safe_print("\n========== BUDGET AGENT INPUT ==========")
+    safe_print("Trip Constraints:")
+    safe_print(str(state.get("trip_constraints")))
+    safe_print("\nFlight Results:")
+    safe_print(str(state.get("flight_results")))
+    safe_print("\nHotel Results:")
+    safe_print(str(state.get("hotel_results")))
+    safe_print("\nWeather Results:")
+    safe_print(str(state.get("weather_results")))
+    safe_print("=========================================\n")
 
     prompt = f"""
 Analyze whether this trip plan is realistic for the user's budget.

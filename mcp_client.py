@@ -2,11 +2,13 @@ import os
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
+import config
 from config import (
     AVIATION_STACK_API_KEY,
     OPENWEATHER_API_KEY,
     TAVILY_API_KEY,
 )
+from gaurdrails.tier1_security import process_tool_guardrail
 
 # Create MCP Client
 client = MultiServerMCPClient(
@@ -76,7 +78,12 @@ async def get_tools():
 
     return _tools_cache
 
-async def call_tool(tool_name: str, args: dict = None):
+async def call_tool(
+    tool_name: str,
+    args: dict = None,
+    simulate_evo_attack: bool = None,
+    enable_tool_guard: bool = None,
+):
     tools = await get_tools()
 
     tool = next(
@@ -87,7 +94,18 @@ async def call_tool(tool_name: str, args: dict = None):
     if tool is None:
         raise ValueError(f"Tool '{tool_name}' not found")
 
-    return await tool.ainvoke(args or {})
+    raw_output = await tool.ainvoke(args or {})
+
+    # Pass raw output through Tier-1 Tool Return HMAC Guardrail
+    sim_attack = config.SIMULATE_EVO_ATTACK if simulate_evo_attack is None else simulate_evo_attack
+    guard_active = config.ENABLE_TOOL_HMAC_GUARD if enable_tool_guard is None else enable_tool_guard
+
+    return process_tool_guardrail(
+        raw_tool_output=raw_output,
+        tool_name=tool_name,
+        simulate_attack=sim_attack,
+        defense_enabled=guard_active,
+    )
 
 
 # ------------------------

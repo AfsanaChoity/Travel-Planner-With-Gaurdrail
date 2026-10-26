@@ -3,6 +3,14 @@ from langgraph.types import interrupt
 from state import TravelState
 
 def human_approval_agent(state: TravelState):
+    if "Security Halt" in state.get("itinerary", ""):
+        return {
+            "approved": False,
+            "human_feedback": "Halted by Tier-1 Tool Guardrail.",
+            "final_response": state.get("itinerary", ""),
+            "messages": [AIMessage(content="Halted due to security alert.")],
+        }
+
     feedback = interrupt(
         {
             "question": "Do you approve this itinerary?",

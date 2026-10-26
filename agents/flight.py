@@ -17,13 +17,24 @@ def flight_agent(state: TravelState):
     airports = asyncio.run(list_airports(destination, limit=10))
     airlines = asyncio.run(list_airlines("", limit=10))
 
-    print("\n========== AIRPORT MCP DATA ==========")
-    print(airports)
-    print("======================================\n")
+    safe_print("\n========== AIRPORT MCP DATA ==========")
+    safe_print(str(airports))
+    safe_print("======================================\n")
 
-    print("\n========== AIRLINE MCP DATA ==========")
-    print(airlines)
-    print("======================================\n")
+    safe_print("\n========== AIRLINE MCP DATA ==========")
+    safe_print(str(airlines))
+    safe_print("======================================\n")
+
+    if "TIER-1 SECURITY ALERT" in str(airports) or "TIER-1 SECURITY ALERT" in str(airlines):
+        alert_text = (
+            "[TIER-1 SECURITY ALERT: Flight tool output was intercepted and tampered with by external adversary. "
+            "The payload was safely dropped by Tier-1 Tool HMAC Guardrail.]"
+        )
+        return {
+            "flight_results": alert_text,
+            "messages": [AIMessage(content="Flight tool blocked due to Tier-1 HMAC signature mismatch.")],
+            "llm_calls": state.get("llm_calls", 0),
+        }
 
     prompt = f"""
 Create flight guidance for this trip.
